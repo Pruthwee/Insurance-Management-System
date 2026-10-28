@@ -20,6 +20,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import software.amazon.awssdk.core.exception.SdkException;
 
 public class JwtGenraterTokanFilter extends OncePerRequestFilter{
 
@@ -31,7 +32,14 @@ public class JwtGenraterTokanFilter extends OncePerRequestFilter{
 		
 		if(authentication != null) {
 			
-			SecretKey key = Keys.hmacShaKeyFor(SecurityContext.JWT_KEY.getBytes());
+			SecretKey key;
+			try {
+				key = Keys.hmacShaKeyFor(JwtSecretProvider.getJwtKey().getBytes());
+			} catch (SdkException | IllegalStateException e) {
+				logger.warn("JWT signing key is not available, no token issued: " + e.getClass().getSimpleName());
+				filterChain.doFilter(request, response);
+				return;
+			}
 			
 			String jwt = Jwts.builder()
 			.setIssuer("Vinay")
