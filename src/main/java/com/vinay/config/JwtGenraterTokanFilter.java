@@ -8,7 +8,6 @@ import java.util.Set;
 
 import javax.crypto.SecretKey;
 
-
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -21,53 +20,59 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-public class JwtGenraterTokanFilter extends OncePerRequestFilter{
+/**
+ * JWT generation filter.
+ *
+ * The JWT signing key is no longer hard-coded; it is retrieved at runtime from
+ * Google Cloud Secret Manager via {@link GcpSecretManagerService}.
+ */
+public class JwtGenraterTokanFilter extends OncePerRequestFilter {
 
-	@Override
-	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-			throws ServletException, IOException {
-		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-		
-		
-		if(authentication != null) {
-			
-			SecretKey key = Keys.hmacShaKeyFor(SecurityContext.JWT_KEY.getBytes());
-			
-			String jwt = Jwts.builder()
-			.setIssuer("Vinay")
-			.setSubject("JWT Token")
-			.claim("username", authentication.getName())
-			.claim("authorities", convertAuthWithString(authentication.getAuthorities()))
-			.setIssuedAt(new Date())
-			.setExpiration(new Date(new Date().getTime()+30000000))
-			.signWith(key).compact();
-			
-			response.setHeader(SecurityContext.JWT_HEADER, jwt);
-			
-			
-		}
-		
-		filterChain.doFilter(request, response);
-		
-	}
-	
-	
-	private String convertAuthWithString(Collection<? extends GrantedAuthority> collection) {
-		Set<String> auth = new HashSet<>();
-		
-		for(GrantedAuthority gran:collection) {
-			auth.add(gran.getAuthority());
-		}
-		
-		return String.join(",", auth);
-	}
-	
-	
-	
-	@Override
-	protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
-		
-		return !request.getServletPath().equals("/signIn");
-	}
+    private final GcpSecretManagerService gcpSecretManagerService;
 
+    public JwtGenraterTokanFilter(GcpSecretManagerService gcpSecretManagerService) {
+        this.gcpSecretManagerService = gcpSecretManagerService;
+    }
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain)
+            throws ServletException, IOException {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication != null) {
+            // Retrieve the JWT signing key from GCP Secret Manager (loaded at startup)
+            SecretKey key = Keys.hmacShaKeyFor(
+                    gcpSecretManagerService.getJwtSecretKey().getBytes());
+
+            String jwt = Jwts.builder()
+                    .setIssuer("Vinay")
+                    .setSubject("JWT Token")
+                    .claim("username", authentication.getName())
+                    .claim("authorities", convertAuthWithString(authentication.getAuthorities()))
+                    .setIssuedAt(new Date())
+                    .setExpiration(new Date(new Date().getTime() + 30000000))
+                    .signWith(key)
+                    .compact();
+
+            response.setHeader(SecurityContext.JWT_HEADER, jwt);
+        }
+
+        filterChain.doFilter(request, response);
+    }
+
+    private String convertAuthWithString(Collection<? extends GrantedAuthority> collection) {
+        Set<String> auth = new HashSet<>();
+        for (GrantedAuthority gran : collection) {
+            auth.add(gran.getAuthority());
+        }
+        return String.join(",", auth);
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+        return !request.getServletPath().equals("/signIn");
+    }
 }
