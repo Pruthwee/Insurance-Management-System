@@ -23,6 +23,16 @@ import jakarta.servlet.http.HttpServletResponse;
 
 public class JwtGenraterTokanFilter extends OncePerRequestFilter{
 
+	private final SecretManager secretManager;
+
+	public JwtGenraterTokanFilter() {
+		this.secretManager = null;
+	}
+
+	public JwtGenraterTokanFilter(SecretManager secretManager) {
+		this.secretManager = secretManager;
+	}
+
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
 			throws ServletException, IOException {
@@ -31,7 +41,8 @@ public class JwtGenraterTokanFilter extends OncePerRequestFilter{
 		
 		if(authentication != null) {
 			
-			SecretKey key = Keys.hmacShaKeyFor(SecurityContext.JWT_KEY.getBytes());
+			String jwtKey = secretManager != null ? secretManager.getSecret(SecurityContext.JWT_KEY) : SecurityContext.JWT_KEY;
+			SecretKey key = Keys.hmacShaKeyFor(jwtKey.getBytes());
 			
 			String jwt = Jwts.builder()
 			.setIssuer("Vinay")

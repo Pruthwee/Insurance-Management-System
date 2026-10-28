@@ -23,6 +23,16 @@ import jakarta.servlet.http.HttpServletResponse;
 
 public class JwtTokanValideterFilter extends OncePerRequestFilter{
 
+	private final SecretManager secretManager;
+
+	public JwtTokanValideterFilter() {
+		this.secretManager = null;
+	}
+
+	public JwtTokanValideterFilter(SecretManager secretManager) {
+		this.secretManager = secretManager;
+	}
+
 	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
 			throws ServletException, IOException {
@@ -37,7 +47,8 @@ public class JwtTokanValideterFilter extends OncePerRequestFilter{
 				
 				jwt = jwt.substring(7);
 				
-				SecretKey key = Keys.hmacShaKeyFor(SecurityContext.JWT_KEY.getBytes());
+				String jwtKey = secretManager != null ? secretManager.getSecret(SecurityContext.JWT_KEY) : SecurityContext.JWT_KEY;
+				SecretKey key = Keys.hmacShaKeyFor(jwtKey.getBytes());
 				Claims claims = Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(jwt).getBody();
 				String username = String.valueOf(claims.get("username"));
 				String authorities = String.valueOf(claims.get("authorities"));

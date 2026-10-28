@@ -42,8 +42,8 @@ public class AppConfig {
 		.anyRequest()
 		.authenticated()
 		.and()
-		.addFilterAfter(new JwtGenraterTokanFilter(), BasicAuthenticationFilter.class)
-		.addFilterBefore(new JwtTokanValideterFilter(), BasicAuthenticationFilter.class)
+		.addFilterAfter(jwtGenraterTokanFilter(), BasicAuthenticationFilter.class)
+		.addFilterBefore(jwtTokanValideterFilter(), BasicAuthenticationFilter.class)
 		.csrf().disable()
 		.formLogin()
 		.and()
@@ -58,6 +58,21 @@ public class AppConfig {
 	 
 	
 	
+	@Bean
+	public SecretManager secretManager() {
+		return new SecretManager();
+	}
+
+	@Bean
+	public JwtGenraterTokanFilter jwtGenraterTokanFilter() {
+		return new JwtGenraterTokanFilter(secretManager());
+	}
+
+	@Bean
+	public JwtTokanValideterFilter jwtTokanValideterFilter() {
+		return new JwtTokanValideterFilter(secretManager());
+	}
+
 	@Bean
 	public PasswordEncoder passwordEncoder() {
 		return new BCryptPasswordEncoder();
