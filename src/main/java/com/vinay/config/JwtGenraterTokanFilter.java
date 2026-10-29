@@ -31,7 +31,7 @@ public class JwtGenraterTokanFilter extends OncePerRequestFilter{
 		
 		if(authentication != null) {
 			
-			SecretKey key = Keys.hmacShaKeyFor(SecurityContext.JWT_KEY.getBytes());
+			SecretKey key = Keys.hmacShaKeyFor(SecurityContext.jwtKey().getBytes());
 			
 			String jwt = Jwts.builder()
 			.setIssuer("Vinay")
